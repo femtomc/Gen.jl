@@ -380,6 +380,21 @@ function choice_gradients(trace)
     choice_gradients(trace, EmptySelection(), nothing)
 end
 
+"""
+    (choice_value, choice_grad) = choice_gradient(
+        trace, selection::T) where T <: Tuple
+
+Given a previous trace \$(x, t)\$ (`trace`) and a `Tuple` target address, return the gradient with respect to the choice \$c\$:
+```math
+∇_c \\left( \\log P(t; x) \\right)
+```
+
+Also return the assignment (`choice_value`) at the target choice.
+"""
+function choice_gradients(trace, selection::T) where T <: Tuple
+    error("Not implemented")
+end
+
 export GenerativeFunction
 export Trace
 export has_argument_grads

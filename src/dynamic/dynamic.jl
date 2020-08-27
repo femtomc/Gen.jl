@@ -169,5 +169,6 @@ include("project.jl")
 include("update.jl")
 include("regenerate.jl")
 include("backprop.jl")
+include("forwardmode.jl")
 
 export DynamicDSLFunction
