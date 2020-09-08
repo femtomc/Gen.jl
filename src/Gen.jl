@@ -60,6 +60,10 @@ include("dynamic/dynamic.jl")
 # static IR generative function
 include("static_ir/static_ir.jl")
 
+# Jaynes generative function
+include("jaynes/jaynes.jl")
+export @jaynes
+
 # optimization for built-in generative functions (dynamic and static IR)
 include("builtin_optimization.jl")
 
