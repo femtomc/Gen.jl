@@ -8,6 +8,33 @@ is_choice(a) = false
 is_value(::Jaynes.Value) = true
 is_value(a) = false
 
+# ------------ Selections ------------ #
+
+struct JaynesSelection{K <: Jaynes.AddressMap{Jaynes.Select}} <: Selection
+    sel::K
+end
+unwrap(js::JaynesSelection) = js.sel
+
+Base.in(addr, selection::JaynesSelection) = haskey(selection.sel, addr)
+Base.getindex(selection::JaynesSelection, addr) = Jaynes.get_sub(selection.sel, addr)
+Base.isempty(selection::JaynesSelection, addr) = isempty(selection.sel, addr)
+
+# ------------ Choice map ------------ #
+
+struct JaynesChoiceMap{K <: Jaynes.AddressMap} <: ChoiceMap
+    chm::K
+end
+unwrap(jcm::JaynesChoiceMap) = jcm.chm
+
+has_value(choices::JaynesChoiceMap, addr) = Jaynes.has_value(choices.chm, addr)
+get_value(choices::JaynesChoiceMap, addr) = Jaynes.get_value(choices.chm, addr)
+get_submap(choices::JaynesChoiceMap, addr) = Jaynes.get_sub(choices.chm, addr)
+get_values_shallow(choices::JaynesChoiceMap, addr) = Jaynes.shallow_iterator(choices.chm)
+to_array(choices::JaynesChoiceMap, ::Type{T}) where T = Jaynes.array(choices.chm, T)
+from_array(choices::JaynesChoiceMap, arr::Vector) = Jaynes.target(choices.chm, arr)
+
+target(c::Vector{Pair{T, K}}) where {T <: Tuple, K} = JaynesChoiceMap(Jaynes.target(c))
+
 # Trace.
 mutable struct JaynesTrace{T, K <: Jaynes.CallSite} <: Trace
     gen_fn::T
@@ -62,13 +89,13 @@ function simulate(jfn::JaynesFunction, args::Tuple)
     JaynesTrace(jfn, cl, false)
 end
 
-function generate(jfn::JaynesFunction, args::Tuple)
-    ret, cl, w = Jaynes.generate(jfn.fn, args...)
+function generate(jfn::JaynesFunction, args::Tuple, chm::JaynesChoiceMap)
+    ret, cl, w = Jaynes.generate(unwrap(chm), jfn.fn, args...)
     JaynesTrace(jfn, cl, false), w
 end
 
-function assess(jfn::JaynesFunction, args::Tuple, choices::C) where C <: Jaynes.AddressMap
-    ret, w = Jaynes.score(choices, jfn.fn, args...)
+function assess(jfn::JaynesFunction, args::Tuple, choices::JaynesChoiceMap)
+    ret, w = Jaynes.score(unwrap(choices), jfn.fn, args...)
     w, ret
 end
 
@@ -77,25 +104,15 @@ function propose(jfn::JaynesFunction, args::Tuple)
     Jaynes.get_trace(cl), w, ret
 end
 
-function update(trace::JaynesTrace, args::Tuple, arg_diffs::Tuple, constraints::C) where C <: Jaynes.AddressMap
-    ret, cl, w, d, rd = Jaynes.update(constraints, trace.record, args, arg_diffs)
+function update(trace::JaynesTrace, args::Tuple, arg_diffs::Tuple, constraints::JaynesChoiceMap)
+    ret, cl, w, d, rd = Jaynes.update(unwrap(constraints), trace.record, args, arg_diffs)
     JaynesTrace(get_gen_fn(trace), cl, false), w, UnknownChange(), d
 end
 
-function regenerate(trace::JaynesTrace, args::Tuple, arg_diffs::Tuple, selection::C) where C <: Jaynes.Target
-    ret, cl, w, d, rd = Jaynes.regenerate(selection, trace.record, args, arg_diffs)
+function regenerate(trace::JaynesTrace, args::Tuple, arg_diffs::Tuple, selection::JaynesSelection)
+    ret, cl, w, d, rd = Jaynes.regenerate(unwrap(selection), trace.record, args, arg_diffs)
     JaynesTrace(get_gen_fn(trace), cl, false), w, UnknownChange(), d
 end
-
-# ------------ Selections ------------ #
-
-struct JaynesSelection{K <: Jaynes.AddressMap{Jaynes.Select}} <: Selection
-    sel::K
-end
-
-Base.in(addr, selection::JaynesSelection) = haskey(selection.sel, addr)
-Base.getindex(selection::JaynesSelection, addr) = Jaynes.get_sub(selection.sel, addr)
-Base.isempty(selection::JaynesSelection, addr) = isempty(selection.sel, addr)
 
 # ------------ Convenience macro ------------ #
 
@@ -118,6 +135,4 @@ end
 
 export JaynesFunction
 export JaynesTrace
-
-import Jaynes.target
 export target

@@ -6,13 +6,16 @@ using Distributions
 
 model = @jaynes () -> begin
     x ~ Normal(0.0, 1.0)
-    x
+    y ~ Normal(x, 5.0)
+    y
 end
 
 tr = simulate(model, ())
 display(tr)
-tg = target([(:x, ) => 1.0])
-tr, w, rd, d = update(tr, (), (), tg)
-display(tr)
+tg = target([(:y, ) => 1.0])
+trs, lnw, lmle = importance_sampling(model, (), tg, 5000)
+map(trs) do tr
+    display(tr)
+end
 
 end # module
